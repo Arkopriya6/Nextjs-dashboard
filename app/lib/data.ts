@@ -9,7 +9,10 @@ import {
 } from './definitions';
 import { formatCurrency } from './utils';
 
-const sql = postgres(process.env.POSTGRES_URL!, { ssl: 'require' });
+const url = process.env.POSTGRES_URL!;
+// Local Docker Postgres has SSL off; hosted databases like Neon require it.
+const isLocal = /@(localhost|127\.0\.0\.1)[:/]/.test(url);
+const sql = postgres(url, { ssl: isLocal ? false : 'require' });
 
 export async function fetchRevenue() {
   try {

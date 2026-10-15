@@ -2,7 +2,10 @@ import bcrypt from 'bcrypt';
 import postgres from 'postgres';
 import { invoices, customers, revenue, users } from '../lib/placeholder-data';
 
-const sql = postgres(process.env.POSTGRES_URL!, { ssl: 'require' });
+const url = process.env.POSTGRES_URL!;
+// Local Docker Postgres has SSL off; hosted databases like Neon require it.
+const isLocal = /@(localhost|127\.0\.0\.1)[:/]/.test(url);
+const sql = postgres(url, { ssl: isLocal ? false : 'require' });
 
 async function seedUsers() {
   await sql`CREATE EXTENSION IF NOT EXISTS "uuid-ossp"`;
@@ -103,6 +106,9 @@ async function seedRevenue() {
 
 export async function GET() {
   try {
+    // Create the extension once up front: the seed steps below run in
+    // parallel, and concurrent CREATE EXTENSION calls race on a fresh database.
+    await sql`CREATE EXTENSION IF NOT EXISTS "uuid-ossp"`;
     const result = await sql.begin((sql) => [
       seedUsers(),
       seedCustomers(),
